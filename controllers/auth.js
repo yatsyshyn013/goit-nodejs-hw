@@ -1,23 +1,41 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
 const { nanoid } = require("nanoid");
+=======
+const gravatar = require("gravatar");
+const path = require("path");
+const fs = require("fs/promises");
+const Jimp = require("jimp");
+
 
 const {User} = require("../models/user");
 
 const { HttpError, ctrlWrapper, sendEmail } = require("../helpers");
 // const { required } = require("joi");
 
+
 const {SECRET_KEY, BASE_URL} = process.env;
 
 const register = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+=======
+const { SECRET_KEY } = process.env;
+
+const avatarsDir = path.join(__dirname, "../", "public", "avatars");
+
+const register = async(req, res)=> {   
+    const {email, password} = req.body;
+    const user = await User.findOne({email});
+
 
     if (user) {
         throw HttpError(409, "Email in use");
     }
 
     const hashPassword = await bcrypt.hash(password, 10);
+
     const verificationToken = nanoid();
     const newUser = await User.create({ ...req.body, password: hashPassword, verificationToken });
 
@@ -30,6 +48,11 @@ const register = async (req, res) => {
     await sendEmail(verifyEmail);
 
 
+
+
+    const avatarURL = gravatar.url(email);
+
+    const newUser = await User.create({...req.body, password: hashPassword, avatarURL});
 
 
     res.status(201).json({
@@ -116,15 +139,34 @@ const getCurrent = async(req, res)=> {
     })
 }
 
-const logout = async(req, res) => {
-    const {_id} = req.user;
-    await User.findByIdAndUpdate(_id, {token: ""});
+const logout = async (req, res) => {
+    const { _id } = req.user;
+    await User.findByIdAndUpdate(_id, { token: "" });
 
     // res.status(204).json({
     //     message: "Logout success"
     // })
     res.json({
         message: "Logout success"
+    })
+};
+
+const updateAvatar = async (req, res) => {
+    
+    const {_id} = req.user;
+    const {path: tempUpload, originalname} = req.file;
+    const filename = `${_id}_${originalname}`;
+    const resultUpload = path.join(avatarsDir, filename);
+    await fs.rename(tempUpload, resultUpload);
+    const avatarURL = path.join("avatars", filename);
+    await User.findByIdAndUpdate(_id, { avatarURL });
+    const image = await Jimp.read(resultUpload);
+    image.resize(250, 250);
+    // image.write(`${resultUpload}_edited-shapes`);
+    image.write(resultUpload);
+
+    res.json({
+        avatarURL,
     })
 }
 
@@ -135,4 +177,5 @@ module.exports = {
     login: ctrlWrapper(login),
     getCurrent: ctrlWrapper(getCurrent),
     logout: ctrlWrapper(logout),
+    updateAvatar: ctrlWrapper(updateAvatar),
 }
