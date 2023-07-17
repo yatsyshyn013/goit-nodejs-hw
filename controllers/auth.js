@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const { nanoid } = require("nanoid");
-=======
+
 const gravatar = require("gravatar");
 const path = require("path");
 const fs = require("fs/promises");
@@ -20,7 +20,7 @@ const {SECRET_KEY, BASE_URL} = process.env;
 const register = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-=======
+
 const { SECRET_KEY } = process.env;
 
 const avatarsDir = path.join(__dirname, "../", "public", "avatars");
